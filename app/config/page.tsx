@@ -237,8 +237,6 @@ export default function ConfigPage() {
                                     const res = await fetch('/api/ingest/sam')
                                     const data = await res.json()
                                     if (data.error) throw new Error(data.error)
-                                    const data = await res.json()
-                                    if (data.error) throw new Error(data.error)
                                     alert(`Ingestion Report:\n\n🔎 Scanned: ${data.processed}\n✅ Added: ${data.inserted}\n\nDebug Info:\n${JSON.stringify(data.debug, null, 2)}`)
                                 } catch (e: any) {
                                     alert('Ingestion Failed: ' + e.message)
