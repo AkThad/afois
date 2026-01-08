@@ -17,112 +17,23 @@ export default function WarRoom() {
     const [opportunities, setOpportunities] = useState<EnhancedOp[]>([])
     const [loading, setLoading] = useState(true)
     const [statusFilter, setStatusFilter] = useState<string>('ACTIVE')
-    const [typeFilter, setTypeFilter] = useState<string>('ALL')
-    const [sortBy, setSortBy] = useState<'PWIN' | 'DUE_DATE'>('PWIN')
-    const [orgId, setOrgId] = useState<string | null>(null)
+    const [segment, setSegment] = useState<'LIVE' | 'RESEARCH'>('LIVE')
 
-    const supabase = createClient()
-
-    useEffect(() => {
-        fetchData()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
-    // ... (fetchData remains same)
-
-    async function fetchData() {
-        setLoading(true)
-
-        // 1. Get User's Org
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        const { data: members } = await supabase
-            .from('organization_members')
-            .select('org_id')
-            .eq('user_id', user.id)
-            .limit(1)
-
-        const oid = members?.[0]?.org_id
-        setOrgId(oid)
-
-        if (!oid) {
-            setLoading(false)
-            return
-        }
-
-        // 2. Fetch Opportunities + Analysis (Global)
-        const { data: opsData } = await supabase
-            .from('opportunities')
-            .select('*, ai_analysis(*)')
-            .order('created_at', { ascending: false })
-            .limit(100)
-
-        // 3. Fetch Pipeline Statuses (Org Specific)
-        const { data: pipeData } = await supabase
-            .from('pipeline_items')
-            .select('opportunity_id, status')
-            .eq('org_id', oid)
-
-        // 4. Merge
-        if (opsData) {
-            const merged = opsData.map((op: any) => {
-                const pipeItem = pipeData?.find((p: any) => p.opportunity_id === op.id)
-                return {
-                    ...op,
-                    // Use pipeline status if exists, else default to 'POSSIBLE'
-                    pipeline_status: (pipeItem?.status || 'POSSIBLE') as any
-                }
-            })
-            setOpportunities(merged)
-        }
-        setLoading(false)
-    }
-
-    async function updateStatus(opId: string, newStatus: string) {
-        if (!orgId) return
-
-        // Optimistic
-        setOpportunities(prev => prev.map(op =>
-            op.id === opId ? { ...op, pipeline_status: newStatus as any } : op
-        ))
-
-        // Upsert Pipeline Item
-        const { error } = await supabase
-            .from('pipeline_items')
-            .upsert({
-                org_id: orgId,
-                opportunity_id: opId,
-                status: newStatus
-            }, { onConflict: 'org_id, opportunity_id' })
-
-        if (error) {
-            console.error('Status update failed', error)
-            fetchData() // Revert
-        }
-    }
-
-    if (loading) return <div className="p-10 text-center animate-pulse">Loading War Room Intelligence...</div>
-    if (!orgId) return (
-        // ... (Error UI remains same)
-        <div className="p-10 text-center flex flex-col items-center gap-4">
-            <p className="text-xl">No Organization Found.</p>
-            <p className="text-muted-foreground">You need to join or create an organization to view the War Room.</p>
-            <Link href="/config" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md transition">
-                Go to Configuration
-            </Link>
-            <button onClick={fetchData} className="text-sm opacity-50 hover:opacity-100">Retry</button>
-        </div>
-    )
+    // ... (fetchData)
 
     // 1. Filter
     const filteredOps = opportunities.filter(op => {
         const status = op.pipeline_status || 'POSSIBLE'
-        // Type Filter
-        if (typeFilter !== 'ALL') {
-            // For Sources Sought, match imperfect data too
-            if (typeFilter === 'Sources Sought' && op.type !== 'Sources Sought') return false
-            if (typeFilter === 'Solicitation' && op.type === 'Sources Sought') return false
+
+        // Segment Filter
+        if (segment === 'LIVE') {
+            // Live Bids: Solicitation, Combined Syn/Sol
+            const type = op.type?.toLowerCase() || ''
+            if (type.includes('sources sought') || type.includes('presolicitation') || type.includes('special notice')) return false
+        } else {
+            // Market Research: Sources Sought, Presolicitation, Special
+            const type = op.type?.toLowerCase() || ''
+            if (!type.includes('sources sought') && !type.includes('presolicitation') && !type.includes('special notice')) return false
         }
 
         if (statusFilter === 'ACTIVE') return status !== 'NO_BID'
@@ -130,45 +41,35 @@ export default function WarRoom() {
         return status === statusFilter
     })
 
-    // 2. Sort
-    const sortedOps = [...filteredOps].sort((a, b) => {
-        if (sortBy === 'PWIN') {
-            const scoreA = a.ai_analysis?.pwin_score || 0
-            const scoreB = b.ai_analysis?.pwin_score || 0
-            return scoreB - scoreA
-        } else {
-            const dateA = a.response_deadline ? new Date(a.response_deadline).getTime() : 9999999999999
-            const dateB = b.response_deadline ? new Date(b.response_deadline).getTime() : 9999999999999
-            return dateA - dateB
-        }
-    })
-
-    const statusOptions = ['BID', 'POSSIBLE', 'HOLD', 'NO_BID']
-    const filterOptions = ['ACTIVE', 'ALL', ...statusOptions]
-    const typeOptions = ['ALL', 'Solicitation', 'Sources Sought']
+    // ... (Sort logic)
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-black/40 p-4 rounded-xl border border-white/10">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight glow-text">War Room</h1>
-                    <div className="text-sm text-muted-foreground">
-                        {sortedOps.length} Opportunities ({statusFilter.replace('_', ' ')})
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                        <span>{sortedOps.length} Opportunities</span>
+                        <span className="text-white/20">|</span>
+                        <span>{segment === 'LIVE' ? 'Active Solicitations' : 'Early Market Research'}</span>
                     </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto items-end">
-                    <div className="flex items-center bg-white/5 rounded-md p-1 self-start">
-                        <span className="text-xs text-muted-foreground px-2">Type:</span>
-                        <select
-                            value={typeFilter}
-                            onChange={(e) => setTypeFilter(e.target.value)}
-                            className="bg-transparent text-xs text-white p-1 border-none outline-none cursor-pointer"
+                    {/* Segment Toggle */}
+                    <div className="bg-white/5 p-1 rounded-lg flex items-center border border-white/10">
+                        <button
+                            onClick={() => setSegment('LIVE')}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${segment === 'LIVE' ? 'bg-blue-600 text-white shadow-lg' : 'text-muted-foreground hover:text-white'}`}
                         >
-                            {typeOptions.map(t => (
-                                <option key={t} value={t} className="bg-gray-900 text-white">{t}</option>
-                            ))}
-                        </select>
+                            Live Bids
+                        </button>
+                        <button
+                            onClick={() => setSegment('RESEARCH')}
+                            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${segment === 'RESEARCH' ? 'bg-purple-600 text-white shadow-lg' : 'text-muted-foreground hover:text-white'}`}
+                        >
+                            Market Research
+                        </button>
                     </div>
 
                     <div className="flex items-center bg-white/5 rounded-md p-1 self-start">
@@ -241,7 +142,19 @@ export default function WarRoom() {
                                         <div><span className="block text-xs uppercase tracking-wider opacity-50">Agency</span><span className="text-foreground">{op.agency}</span></div>
                                         <div><span className="block text-xs uppercase tracking-wider opacity-50">Set-Aside</span><span className="text-foreground">{op.set_aside || 'None'}</span></div>
                                         <div><span className="block text-xs uppercase tracking-wider opacity-50">Location</span><span className="text-foreground">{city ? `${city}, ` : ''}{op.place_of_performance_state || 'N/A'}</span></div>
-                                        <div><span className="block text-xs uppercase tracking-wider opacity-50">Contact</span><span className="text-foreground truncate" title={contactEmail}>{contactName}</span></div>
+                                        <div>
+                                            <span className="block text-xs uppercase tracking-wider opacity-50">Contact(s)</span>
+                                            <div className="flex flex-col">
+                                                <span className="text-foreground truncate block text-sm" title={contact?.email}>
+                                                    {contactName}
+                                                </span>
+                                                {raw.pointOfContact && raw.pointOfContact.length > 1 && (
+                                                    <span className="text-xs text-muted-foreground truncate block" title={raw.pointOfContact[1].email}>
+                                                        APOC: {raw.pointOfContact[1].fullName}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="md:text-right text-sm text-muted-foreground min-w-[140px] flex flex-col justify-between h-full">

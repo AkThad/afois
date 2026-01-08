@@ -15,7 +15,7 @@ export interface Opportunity {
     site_visit_date?: string // ISO string
     place_of_performance_state?: string
     status?: 'BID' | 'NO_BID' | 'POSSIBLE' | 'HOLD'
-    raw_json?: Record<string, unknown>
+    raw_json?: SAMRawData
     created_at: string
 }
 
@@ -23,6 +23,19 @@ export interface IncumbentData {
     identified_incumbent?: string
     potential_competitors?: string[]
     recent_awards?: Record<string, unknown>[]
+}
+
+export interface Contact {
+    fullName?: string
+    email?: string
+    title?: string
+    phone?: string
+    fax?: string
+}
+
+export interface SAMRawData {
+    pointOfContact?: Contact[]
+    [key: string]: unknown
 }
 
 export interface AIAnalysis {
