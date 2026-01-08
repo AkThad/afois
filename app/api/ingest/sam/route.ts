@@ -28,7 +28,7 @@ export async function GET() {
         for (const naics of TARGET_NAICS) {
             let attempt = 0
             let success = false
-            const maxRetries = 3
+            const maxRetries = 2
 
             while (attempt < maxRetries && !success) {
                 try {

@@ -1,15 +1,15 @@
 export const TARGET_NAICS = [
     // Construction
     '236220', // Commercial Build
-    '237120', // Oil/Gas Pipeline
-    '237310', // Highway/Catch Basins
-    '237990', // Heavy Civil
-    // Logistics/Services
-    '541614', // Logistics Consulting
-    '488510', // Freight Arrangement
-    '213112', // Oil/Gas Support
-    // Manufacturing
-    '332311', // Prefab Metal Buildings - PEMB
+    // '237120', // Oil/Gas Pipeline
+    // '237310', // Highway/Catch Basins
+    // '237990', // Heavy Civil
+    // // Logistics/Services
+    // '541614', // Logistics Consulting
+    // '488510', // Freight Arrangement
+    // '213112', // Oil/Gas Support
+    // // Manufacturing
+    // '332311', // Prefab Metal Buildings - PEMB
 ]
 
 export const TIER_1_SET_ASIDES = [
