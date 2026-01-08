@@ -1,7 +1,7 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 // Singleton pattern to prevent "Multiple GoTrueClient instances" warning
-let client: ReturnType<typeof createSupabaseClient> | undefined
+let client: any | undefined
 
 export function createClient() {
   if (client) return client
