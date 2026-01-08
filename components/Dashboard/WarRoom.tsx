@@ -67,7 +67,7 @@ export default function WarRoom() {
         // 4. Merge
         if (opsData) {
             const merged = opsData.map((op: any) => {
-                const pipeItem = pipeData?.find(p => p.opportunity_id === op.id)
+                const pipeItem = pipeData?.find((p: any) => p.opportunity_id === op.id)
                 return {
                     ...op,
                     // Use pipeline status if exists, else default to 'POSSIBLE'
