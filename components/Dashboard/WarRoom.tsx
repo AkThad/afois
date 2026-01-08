@@ -18,6 +18,15 @@ export default function WarRoom() {
     const [loading, setLoading] = useState(true)
     const [statusFilter, setStatusFilter] = useState<string>('ACTIVE')
     const [segment, setSegment] = useState<'LIVE' | 'RESEARCH'>('LIVE')
+    const [sortBy, setSortBy] = useState<'PWIN' | 'DUE_DATE'>('PWIN')
+    const [orgId, setOrgId] = useState<string | null>(null)
+
+    const supabase = createClient()
+
+    useEffect(() => {
+        fetchData()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     // ... (fetchData)
 
