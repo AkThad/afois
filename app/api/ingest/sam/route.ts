@@ -103,8 +103,9 @@ export async function GET() {
                         }
                     }
 
-                } catch (err) {
+                } catch (err: any) {
                     console.error(`Exception fetching NAICS ${naics}:`, err)
+                    globalErrors.push(`NAICS ${naics} Exception: ${err.message || err}`)
                     attempt++
                 }
             } // End retry loop
