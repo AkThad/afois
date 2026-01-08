@@ -71,7 +71,7 @@ export default function WarRoom() {
                 return {
                     ...op,
                     // Use pipeline status if exists, else default to 'POSSIBLE'
-                    pipeline_status: pipeItem?.status || 'POSSIBLE'
+                    pipeline_status: (pipeItem?.status || 'POSSIBLE') as any
                 }
             })
             setOpportunities(merged)
