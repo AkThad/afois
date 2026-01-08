@@ -4,6 +4,7 @@ import { TARGET_NAICS, TARGET_STATES } from '@/lib/ingest/constants'
 import { subDays, format } from 'date-fns'
 
 export const maxDuration = 300 // 5 minutes for Edge/Node functions (if supported by plan)
+export const dynamic = 'force-dynamic' // CRITICAL: Prevent Next.js from caching this GET request at build time
 
 export async function GET() {
     try {
