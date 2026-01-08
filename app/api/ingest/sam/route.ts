@@ -19,6 +19,7 @@ export async function GET() {
 
         let processedCount = 0
         let insertedCount = 0
+        const globalErrors: string[] = []
 
         // Helper for delay
         const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -46,6 +47,7 @@ export async function GET() {
                         }
                         // Other errors: log and skip this NAICS
                         console.error(`Failed to fetch SAM for NAICS ${naics}: ${res.statusText}`)
+                        globalErrors.push(`NAICS ${naics}: HTTP ${res.status} ${res.statusText}`)
                         break
                     }
 
@@ -116,9 +118,10 @@ export async function GET() {
             inserted: insertedCount,
             debug: {
                 naics_checked: TARGET_NAICS.length,
-                last_url_masked: `...${apiKey.slice(-4)}&ncode=${TARGET_NAICS[0]}`,
+                last_url_masked: apiKey ? `...${apiKey.slice(-4)}` : 'MISSING',
                 sample_response_keys: processedCount === 0 ? "No ops found" : "Ops found",
-                range: { postedFrom, postedTo }
+                range: { postedFrom, postedTo },
+                errors: globalErrors
             }
         })
 
