@@ -41,7 +41,18 @@ export default function WarRoom() {
         return status === statusFilter
     })
 
-    // ... (Sort logic)
+    // 2. Sort
+    const sortedOps = [...filteredOps].sort((a, b) => {
+        if (sortBy === 'PWIN') {
+            const scoreA = a.ai_analysis?.pwin_score || 0
+            const scoreB = b.ai_analysis?.pwin_score || 0
+            return scoreB - scoreA
+        } else {
+            const dateA = a.response_deadline ? new Date(a.response_deadline).getTime() : 9999999999999
+            const dateB = b.response_deadline ? new Date(b.response_deadline).getTime() : 9999999999999
+            return dateA - dateB
+        }
+    })
 
     return (
         <div className="space-y-6">
