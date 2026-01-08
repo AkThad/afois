@@ -20,6 +20,7 @@ export async function GET() {
         let processedCount = 0
         let insertedCount = 0
         const globalErrors: string[] = []
+        let rawDebug: any = null
 
         // Helper for delay
         const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -52,6 +53,7 @@ export async function GET() {
                     }
 
                     const data = await res.json()
+                    if (!rawDebug) rawDebug = data // Capture first successful response
                     const opportunities = data.opportunities || []
                     success = true // Mark as successful to exit retry loop
 
@@ -120,6 +122,7 @@ export async function GET() {
                 naics_checked: TARGET_NAICS.length,
                 last_url_masked: apiKey ? `...${apiKey.slice(-4)}` : 'MISSING',
                 sample_response_keys: processedCount === 0 ? "No ops found" : "Ops found",
+                raw_response_preview: rawDebug ? (JSON.stringify(rawDebug).slice(0, 200) + '...') : "Null",
                 range: { postedFrom, postedTo },
                 errors: globalErrors
             }
