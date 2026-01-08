@@ -28,7 +28,89 @@ export default function WarRoom() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    // ... (fetchData)
+    async function fetchData() {
+        setLoading(true)
+
+        // 1. Get User's Org
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data: members } = await supabase
+            .from('organization_members')
+            .select('org_id')
+            .eq('user_id', user.id)
+            .limit(1)
+
+        const oid = members?.[0]?.org_id
+        setOrgId(oid)
+
+        if (!oid) {
+            setLoading(false)
+            return
+        }
+
+        // 2. Fetch Opportunities + Analysis (Global)
+        const { data: opsData } = await supabase
+            .from('opportunities')
+            .select('*, ai_analysis(*)')
+            .order('created_at', { ascending: false })
+            .limit(100)
+
+        // 3. Fetch Pipeline Statuses (Org Specific)
+        const { data: pipeData } = await supabase
+            .from('pipeline_items')
+            .select('opportunity_id, status')
+            .eq('org_id', oid)
+
+        // 4. Merge
+        if (opsData) {
+            const merged = opsData.map((op: any) => {
+                const pipeItem = pipeData?.find((p: any) => p.opportunity_id === op.id)
+                return {
+                    ...op,
+                    // Use pipeline status if exists, else default to 'POSSIBLE'
+                    pipeline_status: (pipeItem?.status || 'POSSIBLE') as any
+                }
+            })
+            setOpportunities(merged)
+        }
+        setLoading(false)
+    }
+
+    async function updateStatus(opId: string, newStatus: string) {
+        if (!orgId) return
+
+        // Optimistic
+        setOpportunities(prev => prev.map(op =>
+            op.id === opId ? { ...op, pipeline_status: newStatus as any } : op
+        ))
+
+        // Upsert Pipeline Item
+        const { error } = await supabase
+            .from('pipeline_items')
+            .upsert({
+                org_id: orgId,
+                opportunity_id: opId,
+                status: newStatus
+            }, { onConflict: 'org_id, opportunity_id' })
+
+        if (error) {
+            console.error('Status update failed', error)
+            fetchData() // Revert
+        }
+    }
+
+    if (loading) return <div className="p-10 text-center animate-pulse">Loading War Room Intelligence...</div>
+    if (!orgId) return (
+        <div className="p-10 text-center flex flex-col items-center gap-4">
+            <p className="text-xl">No Organization Found.</p>
+            <p className="text-muted-foreground">You need to join or create an organization to view the War Room.</p>
+            <Link href="/config" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md transition">
+                Go to Configuration
+            </Link>
+            <button onClick={fetchData} className="text-sm opacity-50 hover:opacity-100">Retry</button>
+        </div>
+    )
 
     // 1. Filter
     const filteredOps = opportunities.filter(op => {
