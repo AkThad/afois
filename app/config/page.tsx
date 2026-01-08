@@ -237,7 +237,7 @@ export default function ConfigPage() {
                                     const res = await fetch('/api/ingest/sam')
                                     const data = await res.json()
                                     if (data.error) throw new Error(data.error)
-                                    alert(`Ingestion Complete! ${data.inserted} new opportunities added.`)
+                                    alert(`Ingestion Report:\n\n🔎 Scanned: ${data.processed} opportunities\n✅ Added: ${data.inserted} new records\n\n(If Scanned is > 0 but Added is 0, they already exist in your database.)`)
                                 } catch (e: any) {
                                     alert('Ingestion Failed: ' + e.message)
                                 }
