@@ -145,6 +145,10 @@ export default function WarRoom() {
         }
     })
 
+    const statusOptions = ['BID', 'POSSIBLE', 'HOLD', 'NO_BID']
+    const filterOptions = ['ACTIVE', 'ALL', ...statusOptions]
+    const typeOptions = ['ALL', 'Solicitation', 'Sources Sought']
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center bg-black/40 p-4 rounded-xl border border-white/10">
