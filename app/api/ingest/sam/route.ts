@@ -13,8 +13,8 @@ export async function GET() {
             return NextResponse.json({ error: 'SAM_API_KEY not configured' }, { status: 500 })
         }
 
-        // T-365 days (1 Year) to catch active-but-older ops
-        const postedFrom = format(subDays(new Date(), 365), 'MM/dd/yyyy')
+        // T-90 days to catch active ops without hitting API limits
+        const postedFrom = format(subDays(new Date(), 90), 'MM/dd/yyyy')
         const postedTo = format(new Date(), 'MM/dd/yyyy')
 
         let processedCount = 0
@@ -54,7 +54,7 @@ export async function GET() {
 
                     const data = await res.json()
                     if (!rawDebug) rawDebug = data // Capture first successful response
-                    const opportunities = data.opportunities || []
+                    const opportunities = data.opportunitiesData || []
                     success = true // Mark as successful to exit retry loop
 
                     for (const op of opportunities) {
