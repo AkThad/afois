@@ -13,14 +13,16 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'SAM_API_KEY not configured' }, { status: 500 })
         }
 
-        // Get orgId from query params (optional - falls back to first org or constants)
+        // Get query params
         const { searchParams } = new URL(request.url)
         const orgId = searchParams.get('orgId')
+        const skipGeoFilter = searchParams.get('skipGeoFilter') === 'true'
 
         // Fetch organization configuration from database
         let targetNaics = TARGET_NAICS
         let targetStates = TARGET_STATES
         let orgName = 'Default'
+        const stateDistribution: Record<string, number> = {} // Track what states we see
 
         if (orgId) {
             const { data: org, error: orgError } = await supabaseAdmin
@@ -115,16 +117,23 @@ export async function GET(request: Request) {
                         const popState = op.placeOfPerformance?.state?.code || ''
                         const popCountry = op.placeOfPerformance?.country?.code || ''
 
-                        const isGeoMatch =
-                            targetStates.includes(popState) ||
-                            (popCountry === 'MEX') ||
-                            !popState || // Null
-                            popState.toLowerCase() === 'multiple' ||
-                            op.placeOfPerformance?.city?.name?.toLowerCase() === 'multiple'
+                        // Track state distribution for debugging
+                        const stateKey = popState || '(empty)'
+                        stateDistribution[stateKey] = (stateDistribution[stateKey] || 0) + 1
 
-                        if (!isGeoMatch) {
-                            skippedGeo++
-                            continue
+                        // Skip geo filter if param is set
+                        if (!skipGeoFilter) {
+                            const isGeoMatch =
+                                targetStates.includes(popState) ||
+                                (popCountry === 'MEX') ||
+                                !popState || // Null/empty
+                                popState.toLowerCase() === 'multiple' ||
+                                op.placeOfPerformance?.city?.name?.toLowerCase() === 'multiple'
+
+                            if (!isGeoMatch) {
+                                skippedGeo++
+                                continue
+                            }
                         }
 
                         // Insert into DB
@@ -174,6 +183,8 @@ export async function GET(request: Request) {
                 org: orgName,
                 naics_used: targetNaics,
                 states_used: targetStates,
+                geo_filter_skipped: skipGeoFilter,
+                state_distribution: stateDistribution,
                 naics_checked: targetNaics.length,
                 last_url_masked: apiKey ? `...${apiKey.slice(-4)}` : 'MISSING',
                 sample_response_keys: processedCount === 0 ? "No ops found" : "Ops found",
