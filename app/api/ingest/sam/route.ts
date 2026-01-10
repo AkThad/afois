@@ -88,7 +88,14 @@ export async function GET(request: Request) {
                     if (attempt > 0) console.log(`Retry attempt ${attempt} for NAICS ${naics}. Waiting ${waitTime}ms...`)
                     await delay(waitTime)
 
-                    const url = `https://api.sam.gov/prod/opportunities/v2/search?api_key=${apiKey}&postedFrom=${postedFrom}&postedTo=${postedTo}&limit=1000&ncode=${naics}&active=yes`
+                    // Build URL with state filter if states are configured
+                    let url = `https://api.sam.gov/prod/opportunities/v2/search?api_key=${apiKey}&postedFrom=${postedFrom}&postedTo=${postedTo}&limit=1000&ncode=${naics}&active=yes`
+
+                    // Add state filter to API query (SAM API supports comma-separated states)
+                    if (targetStates.length > 0) {
+                        url += `&state=${targetStates.join(',')}`
+                    }
+
                     const res = await fetch(url)
 
                     if (!res.ok) {
@@ -183,6 +190,7 @@ export async function GET(request: Request) {
                 org: orgName,
                 naics_used: targetNaics,
                 states_used: targetStates,
+                states_passed_to_api: targetStates.length > 0,
                 geo_filter_skipped: skipGeoFilter,
                 state_distribution: stateDistribution,
                 naics_checked: targetNaics.length,
