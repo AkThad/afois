@@ -125,18 +125,8 @@ export async function GET(request: Request) {
                         const stateKey = officeState || '(no office state)'
                         stateDistribution[stateKey] = (stateDistribution[stateKey] || 0) + 1
 
-                        // Skip geo filter if param is set
-                        if (!skipGeoFilter) {
-                            // Match if office is in target state OR if no office state specified (could be anywhere)
-                            const isGeoMatch =
-                                targetStates.includes(officeState) ||   // Office in target state
-                                !officeState                            // No office state (include anyway)
-
-                            if (!isGeoMatch) {
-                                skippedGeo++
-                                continue
-                            }
-                        }
+                        // GEO FILTER DISABLED - Inserting all opportunities for testing
+                        // TODO: Re-enable with proper state filtering via API parameter
 
                         // Insert into DB
                         const { error } = await supabaseAdmin
