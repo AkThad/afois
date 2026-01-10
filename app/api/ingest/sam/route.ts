@@ -153,7 +153,7 @@ export async function GET(request: Request) {
                                 posted_date: op.postedDate,
                                 response_deadline: op.responseDeadLine,
                                 site_visit_date: null,
-                                place_of_performance_state: popState,
+                                place_of_performance_state: officeState,
                                 raw_json: op
                             }, { onConflict: 'notice_id' })
 
