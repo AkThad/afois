@@ -6,26 +6,75 @@ import { subDays, format } from 'date-fns'
 export const maxDuration = 300 // 5 minutes for Edge/Node functions (if supported by plan)
 export const dynamic = 'force-dynamic' // CRITICAL: Prevent Next.js from caching this GET request at build time
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
         const apiKey = process.env.SAM_API_KEY
         if (!apiKey) {
             return NextResponse.json({ error: 'SAM_API_KEY not configured' }, { status: 500 })
         }
 
-        // T-90 days to catch active ops without hitting API limits
+        // Get orgId from query params (optional - falls back to first org or constants)
+        const { searchParams } = new URL(request.url)
+        const orgId = searchParams.get('orgId')
+
+        // Fetch organization configuration from database
+        let targetNaics = TARGET_NAICS
+        let targetStates = TARGET_STATES
+        let orgName = 'Default'
+
+        if (orgId) {
+            const { data: org, error: orgError } = await supabaseAdmin
+                .from('organizations')
+                .select('name, target_naics, target_states')
+                .eq('id', orgId)
+                .single()
+
+            if (orgError) {
+                console.error('Error fetching org config:', orgError)
+                // Continue with defaults
+            } else if (org) {
+                orgName = org.name
+                if (org.target_naics && org.target_naics.length > 0) {
+                    targetNaics = org.target_naics
+                }
+                if (org.target_states && org.target_states.length > 0) {
+                    targetStates = org.target_states
+                }
+            }
+        } else {
+            // No orgId provided - try to get first organization as default
+            const { data: orgs } = await supabaseAdmin
+                .from('organizations')
+                .select('name, target_naics, target_states')
+                .limit(1)
+
+            if (orgs && orgs.length > 0) {
+                const org = orgs[0]
+                orgName = org.name
+                if (org.target_naics && org.target_naics.length > 0) {
+                    targetNaics = org.target_naics
+                }
+                if (org.target_states && org.target_states.length > 0) {
+                    targetStates = org.target_states
+                }
+            }
+        }
+
+        // User requested "Active" postings. Explicit "active=true" parameter in SAM API is best, 
+        // but we also need a date range. Let's look back 90 days to avoid API limits (400 Bad Request).
         const postedFrom = format(subDays(new Date(), 90), 'MM/dd/yyyy')
         const postedTo = format(new Date(), 'MM/dd/yyyy')
 
         let processedCount = 0
         let insertedCount = 0
+        let skippedGeo = 0
         const globalErrors: string[] = []
         let rawDebug: any = null
 
         // Helper for delay
         const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-        for (const naics of TARGET_NAICS) {
+        for (const naics of targetNaics) {
             let attempt = 0
             let success = false
             const maxRetries = 2
@@ -37,7 +86,7 @@ export async function GET() {
                     if (attempt > 0) console.log(`Retry attempt ${attempt} for NAICS ${naics}. Waiting ${waitTime}ms...`)
                     await delay(waitTime)
 
-                    const url = `https://api.sam.gov/prod/opportunities/v2/search?api_key=${apiKey}&postedFrom=${postedFrom}&postedTo=${postedTo}&limit=1000&ncode=${naics}`
+                    const url = `https://api.sam.gov/prod/opportunities/v2/search?api_key=${apiKey}&postedFrom=${postedFrom}&postedTo=${postedTo}&limit=1000&ncode=${naics}&active=yes`
                     const res = await fetch(url)
 
                     if (!res.ok) {
@@ -67,13 +116,14 @@ export async function GET() {
                         const popCountry = op.placeOfPerformance?.country?.code || ''
 
                         const isGeoMatch =
-                            TARGET_STATES.includes(popState) ||
+                            targetStates.includes(popState) ||
                             (popCountry === 'MEX') ||
                             !popState || // Null
                             popState.toLowerCase() === 'multiple' ||
-                            op.placeOfPerformance?.city?.name?.toLowerCase() === 'multiple' // Sometimes "Multiple" is in city
+                            op.placeOfPerformance?.city?.name?.toLowerCase() === 'multiple'
 
                         if (!isGeoMatch) {
+                            skippedGeo++
                             continue
                         }
 
@@ -83,7 +133,7 @@ export async function GET() {
                             .upsert({
                                 source: 'SAM',
                                 notice_id: op.noticeId,
-                                title: op.subject,
+                                title: op.title || op.subject || 'Untitled',
                                 agency: op.departmentName || op.agency || 'Unknown',
                                 solicitation_number: op.solicitationNumber,
                                 naics_code: naics,
@@ -119,8 +169,12 @@ export async function GET() {
             success: true,
             processed: processedCount,
             inserted: insertedCount,
+            skipped_geo: skippedGeo,
             debug: {
-                naics_checked: TARGET_NAICS.length,
+                org: orgName,
+                naics_used: targetNaics,
+                states_used: targetStates,
+                naics_checked: targetNaics.length,
                 last_url_masked: apiKey ? `...${apiKey.slice(-4)}` : 'MISSING',
                 sample_response_keys: processedCount === 0 ? "No ops found" : "Ops found",
                 raw_response_preview: rawDebug ? (JSON.stringify(rawDebug).slice(0, 200) + '...') : "Null",

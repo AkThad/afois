@@ -28,7 +28,7 @@ export const TIER_2_SET_ASIDES = [
     'SBP', // Partial Small Business
 ]
 
-export const TARGET_STATES = ['AK', 'AZ']
+export const TARGET_STATES = ['AK', 'AZ', 'CA']
 export const TARGET_COUNTRIES = ['MEX', 'USA'] // USA is implied for states, MEX for international
 
 // SAM API usually uses codes. We might need to map '8A', 'IEE' to actual SAM codes if different.
