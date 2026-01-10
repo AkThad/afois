@@ -24,7 +24,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const APP_VERSION = "V1.011"; // Added robust field mapping + DB error reporting
+  const APP_VERSION = "V1.012"; // Copy-friendly ingestion reports
 
   return (
     <html lang="en" className="dark" suppressHydrationWarning>

@@ -206,11 +206,31 @@ export async function GET(request: Request) {
             }
         }
 
+        const reportText = `
+INGESTION REPORT (V1.012)
+========================
+Status: ${insertedCount > 0 ? 'SUCCESS' : 'NO RECORDS ADDED'}
+Processed (Scanned): ${processedCount}
+Successfully Added/Updated: ${insertedCount}
+Geo Skipped: ${skippedGeo}
+
+ORGANIZATION: ${orgName}
+NAICS CHECKED: ${targetNaics.join(', ')}
+STATES FILTERED (UI): ${targetStates.join(', ')}
+
+ERRORS:
+${globalErrors.length > 0 ? globalErrors.join('\n') : 'None'}
+
+STATE DISTRIBUTION (OFFICE):
+${Object.entries(stateDistribution).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
+`.trim();
+
         return NextResponse.json({
             success: true,
             processed: processedCount,
             inserted: insertedCount,
             skipped_geo: skippedGeo,
+            report_text: reportText,
             debug: {
                 org: orgName,
                 naics_used: targetNaics,
@@ -221,7 +241,7 @@ export async function GET(request: Request) {
                 naics_checked: targetNaics.length,
                 last_url_masked: apiKey ? `...${apiKey.slice(-4)}` : 'MISSING',
                 sample_response_keys: processedCount === 0 ? "No ops found" : "Ops found",
-                raw_response_preview: rawDebug ? (JSON.stringify(rawDebug).slice(0, 200) + '...') : "Null",
+                raw_response_preview: rawDebug ? (JSON.stringify(rawDebug).slice(0, 500) + '...') : "Null",
                 range: { postedFrom, postedTo },
                 errors: globalErrors
             }
