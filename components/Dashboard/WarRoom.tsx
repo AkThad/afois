@@ -19,6 +19,7 @@ export default function WarRoom() {
     const [statusFilter, setStatusFilter] = useState<string>('ACTIVE')
     const [segment, setSegment] = useState<'LIVE' | 'RESEARCH'>('LIVE')
     const [sortBy, setSortBy] = useState<'PWIN' | 'DUE_DATE'>('PWIN')
+    const [locationFilter, setLocationFilter] = useState<string>('ALL')
     const [orgId, setOrgId] = useState<string | null>(null)
 
     const supabase = createClient()
@@ -112,9 +113,18 @@ export default function WarRoom() {
         </div>
     )
 
+    // Get unique states from opportunities for filter dropdown
+    const availableStates = [...new Set(opportunities.map(op => op.place_of_performance_state || '(No State)'))].sort()
+
     // 1. Filter
     const filteredOps = opportunities.filter(op => {
         const status = op.pipeline_status || 'POSSIBLE'
+
+        // Location Filter
+        if (locationFilter !== 'ALL') {
+            const opState = op.place_of_performance_state || '(No State)'
+            if (opState !== locationFilter) return false
+        }
 
         // Segment Filter
         if (segment === 'LIVE') {
@@ -199,6 +209,20 @@ export default function WarRoom() {
                         >
                             {filterOptions.map(opt => (
                                 <option key={opt} value={opt} className="bg-gray-900 text-white">{opt.replace('_', ' ')}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="flex items-center bg-white/5 rounded-md p-1 self-start">
+                        <span className="text-xs text-muted-foreground px-2">Location:</span>
+                        <select
+                            value={locationFilter}
+                            onChange={(e) => setLocationFilter(e.target.value)}
+                            className="bg-transparent text-xs text-white p-1 border-none outline-none cursor-pointer"
+                        >
+                            <option value="ALL" className="bg-gray-900 text-white">All States</option>
+                            {availableStates.map(state => (
+                                <option key={state} value={state} className="bg-gray-900 text-white">{state}</option>
                             ))}
                         </select>
                     </div>

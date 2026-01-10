@@ -24,7 +24,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const APP_VERSION = "V1.008"; // Geo filter disabled for testing
+  const APP_VERSION = "V1.009"; // Added location filter to War Room
 
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
