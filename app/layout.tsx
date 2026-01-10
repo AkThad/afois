@@ -24,7 +24,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const APP_VERSION = "V1.012"; // Copy-friendly ingestion reports
+  const APP_VERSION = "V1.013"; // Diagnostic build + Forced Deploy Ready
 
   return (
     <html lang="en" className="dark" suppressHydrationWarning>

@@ -206,13 +206,19 @@ export async function GET(request: Request) {
             }
         }
 
+        // DIAGNOSTICS: Check total DB count
+        const { count: totalInDb } = await supabaseAdmin
+            .from('opportunities')
+            .select('*', { count: 'exact', head: true })
+
         const reportText = `
-INGESTION REPORT (V1.012)
+INGESTION REPORT (V1.013)
 ========================
+Time: ${new Date().toISOString()}
+Total Records in DB: ${totalInDb || 0}
 Status: ${insertedCount > 0 ? 'SUCCESS' : 'NO RECORDS ADDED'}
 Processed (Scanned): ${processedCount}
 Successfully Added/Updated: ${insertedCount}
-Geo Skipped: ${skippedGeo}
 
 ORGANIZATION: ${orgName}
 NAICS CHECKED: ${targetNaics.join(', ')}
@@ -227,28 +233,30 @@ ${Object.entries(stateDistribution).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
 
         return NextResponse.json({
             success: true,
+            version: "V1.013",
             processed: processedCount,
             inserted: insertedCount,
-            skipped_geo: skippedGeo,
+            total_in_db: totalInDb,
             report_text: reportText,
             debug: {
                 org: orgName,
                 naics_used: targetNaics,
                 states_used: targetStates,
-                states_passed_to_api: false, // Intentionally false to capture blank POPs
+                states_passed_to_api: false,
                 geo_filter_skipped: skipGeoFilter,
                 state_distribution: stateDistribution,
                 naics_checked: targetNaics.length,
                 last_url_masked: apiKey ? `...${apiKey.slice(-4)}` : 'MISSING',
-                sample_response_keys: processedCount === 0 ? "No ops found" : "Ops found",
-                raw_response_preview: rawDebug ? (JSON.stringify(rawDebug).slice(0, 500) + '...') : "Null",
+                sample_response_keys: processedCount > 0 ? Object.keys(op || {}) : [],
+                raw_response_preview: rawDebug ? (JSON.stringify(rawDebug).slice(0, 1000) + '...') : "Null",
                 range: { postedFrom, postedTo },
-                errors: globalErrors
+                errors: globalErrors,
+                dry_run: false
             }
         })
 
     } catch (err: unknown) {
         console.error('SAM Ingestion Error:', err)
-        return NextResponse.json({ error: (err as Error).message }, { status: 500 })
+        return NextResponse.json({ error: (err as Error).message, version: "V1.013-ERROR" }, { status: 500 })
     }
 }
