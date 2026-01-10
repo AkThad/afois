@@ -5,7 +5,7 @@ export const TARGET_NAICS = [
     // '237310', // Highway/Catch Basins
     // '237990', // Heavy Civil
     // // Logistics/Services
-    // '541614', // Logistics Consulting
+    '541614', // Logistics Consulting
     // '488510', // Freight Arrangement
     // '213112', // Oil/Gas Support
     // // Manufacturing
