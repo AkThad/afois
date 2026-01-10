@@ -115,11 +115,48 @@ export async function GET(request: Request) {
                     for (const op of opportunities) {
                         processedCount++
 
-                        const setAside = op.typeOfSetAside || op.typeOfSetAsideDescription || ''
+                        // 1. Ensure op is an object (in case it's stringified)
+                        let opObj = op;
+                        if (typeof opObj === 'string') {
+                            try {
+                                opObj = JSON.parse(opObj);
+                            } catch (e) {
+                                if (globalErrors.length < 5) globalErrors.push(`Record ${processedCount} Parse Fail: ${opObj.slice(0, 50)}`);
+                                continue;
+                            }
+                        }
 
-                        // 2. Office Location Filter (matches SAM.gov behavior)
-                        // Target states come from organization config in database
-                        const officeState = op.officeAddress?.state || ''
+                        // 2. Robust Field Mapping (handles inconsistent API casing)
+                        const getF = (o: any, ...ks: string[]) => {
+                            for (const k of ks) {
+                                if (o[k] !== undefined && o[k] !== null) return o[k];
+                            }
+                            // Case-insensitive fallback
+                            const keys = Object.keys(o || {});
+                            for (const k of ks) {
+                                const found = keys.find(lk => lk.toLowerCase() === k.toLowerCase());
+                                if (found) return o[found];
+                            }
+                            return null;
+                        };
+
+                        const noticeId = getF(opObj, 'noticeId', 'noticeld', 'notice_id', 'noticeID', 'noticeid') as string;
+                        const title = getF(opObj, 'title', 'subject', 'headline') || 'Untitled';
+                        const agency = getF(opObj, 'departmentName', 'agency', 'agencyName', 'organization') || 'Unknown';
+                        const solNum = getF(opObj, 'solicitationNumber', 'solnum', 'solicitation_number');
+                        const posted = getF(opObj, 'postedDate', 'posted_date');
+                        const deadline = getF(opObj, 'responseDeadLine', 'response_deadline', 'responseDeadline');
+                        const setAside = getF(opObj, 'typeOfSetAsideDescription', 'typeOfSetAside', 'setaside') || '';
+
+                        if (!noticeId) {
+                            if (globalErrors.length < 3) {
+                                globalErrors.push(`Record ${processedCount}: Missing notice ID. Keys: ${Object.keys(opObj).join(', ')}`);
+                            }
+                            continue;
+                        }
+
+                        // 3. Office Location (matches SAM.gov website behavior)
+                        const officeState = opObj.officeAddress?.state || '';
 
                         // Track state distribution for debugging
                         const stateKey = officeState || '(no office state)'
@@ -128,26 +165,29 @@ export async function GET(request: Request) {
                         // GEO FILTER DISABLED - Inserting all opportunities for testing
                         // TODO: Re-enable with proper state filtering via API parameter
 
-                        // Insert into DB
+                        // 4. Insert into DB
                         const { error } = await supabaseAdmin
                             .from('opportunities')
                             .upsert({
                                 source: 'SAM',
-                                notice_id: op.noticeId,
-                                title: op.title || op.subject || 'Untitled',
-                                agency: op.departmentName || op.agency || 'Unknown',
-                                solicitation_number: op.solicitationNumber,
+                                notice_id: noticeId,
+                                title: title,
+                                agency: agency,
+                                solicitation_number: solNum,
                                 naics_code: naics,
                                 set_aside: setAside,
-                                type: op.type || 'Solicitation',
-                                posted_date: op.postedDate,
-                                response_deadline: op.responseDeadLine,
+                                type: opObj.type || 'Solicitation',
+                                posted_date: posted,
+                                response_deadline: deadline,
                                 site_visit_date: null,
                                 place_of_performance_state: officeState,
-                                raw_json: op
+                                raw_json: opObj
                             }, { onConflict: 'notice_id' })
 
                         if (error) {
+                            if (globalErrors.length < 10) {
+                                globalErrors.push(`DB Error [${noticeId}]: ${error.message} (${error.code})`);
+                            }
                             console.error('Error inserting opportunity:', error)
                         } else {
                             insertedCount++

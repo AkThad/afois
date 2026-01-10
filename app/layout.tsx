@@ -24,7 +24,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const APP_VERSION = "V1.009"; // Added location filter to War Room
+  const APP_VERSION = "V1.011"; // Added robust field mapping + DB error reporting
 
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
