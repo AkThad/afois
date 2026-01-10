@@ -117,20 +117,24 @@ export async function GET(request: Request) {
 
                         const setAside = op.typeOfSetAside || op.typeOfSetAsideDescription || ''
 
-                        // 2. Place of Performance Filter
+                        // 2. Location Filter (Place of Performance OR Office Address)
                         const popState = op.placeOfPerformance?.state?.code || ''
                         const popCountry = op.placeOfPerformance?.country?.code || ''
 
+                        // SAM.gov also filters by issuing office location (e.g., Juneau, AK office)
+                        const officeState = op.officeAddress?.state || ''
+
                         // Track state distribution for debugging
-                        const stateKey = popState || '(empty)'
+                        const stateKey = popState || officeState || '(empty)'
                         stateDistribution[stateKey] = (stateDistribution[stateKey] || 0) + 1
 
                         // Skip geo filter if param is set
                         if (!skipGeoFilter) {
                             const isGeoMatch =
-                                targetStates.includes(popState) ||
-                                (popCountry === 'MEX') ||
-                                !popState || // Null/empty
+                                targetStates.includes(popState) ||      // POP in target state
+                                targetStates.includes(officeState) ||   // Office in target state
+                                (popCountry === 'MEX') ||               // Mexico
+                                (!popState && !officeState) ||          // Both blank (could be anywhere)
                                 popState.toLowerCase() === 'multiple' ||
                                 op.placeOfPerformance?.city?.name?.toLowerCase() === 'multiple'
 
