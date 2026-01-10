@@ -24,6 +24,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const APP_VERSION = "V1.007"; // Increment this on each release
+
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body
@@ -32,6 +34,9 @@ export default function RootLayout({
       >
         <Nav />
         {children}
+        <footer className="fixed bottom-2 right-2 text-xs text-gray-500/50">
+          {APP_VERSION}
+        </footer>
       </body>
     </html>
   );
