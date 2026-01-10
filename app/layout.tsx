@@ -24,7 +24,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const APP_VERSION = "V1.007"; // Increment this on each release
+  const APP_VERSION = "V1.008"; // Geo filter disabled for testing
 
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
