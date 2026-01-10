@@ -117,26 +117,20 @@ export async function GET(request: Request) {
 
                         const setAside = op.typeOfSetAside || op.typeOfSetAsideDescription || ''
 
-                        // 2. Location Filter (Place of Performance OR Office Address)
-                        const popState = op.placeOfPerformance?.state?.code || ''
-                        const popCountry = op.placeOfPerformance?.country?.code || ''
-
-                        // SAM.gov also filters by issuing office location (e.g., Juneau, AK office)
+                        // 2. Office Location Filter (matches SAM.gov behavior)
+                        // Target states come from organization config in database
                         const officeState = op.officeAddress?.state || ''
 
                         // Track state distribution for debugging
-                        const stateKey = popState || officeState || '(empty)'
+                        const stateKey = officeState || '(no office state)'
                         stateDistribution[stateKey] = (stateDistribution[stateKey] || 0) + 1
 
                         // Skip geo filter if param is set
                         if (!skipGeoFilter) {
+                            // Match if office is in target state OR if no office state specified (could be anywhere)
                             const isGeoMatch =
-                                targetStates.includes(popState) ||      // POP in target state
                                 targetStates.includes(officeState) ||   // Office in target state
-                                (popCountry === 'MEX') ||               // Mexico
-                                (!popState && !officeState) ||          // Both blank (could be anywhere)
-                                popState.toLowerCase() === 'multiple' ||
-                                op.placeOfPerformance?.city?.name?.toLowerCase() === 'multiple'
+                                !officeState                            // No office state (include anyway)
 
                             if (!isGeoMatch) {
                                 skippedGeo++
