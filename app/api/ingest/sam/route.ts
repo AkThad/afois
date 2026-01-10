@@ -247,7 +247,7 @@ ${Object.entries(stateDistribution).map(([k, v]) => `- ${k}: ${v}`).join('\n')}
                 state_distribution: stateDistribution,
                 naics_checked: targetNaics.length,
                 last_url_masked: apiKey ? `...${apiKey.slice(-4)}` : 'MISSING',
-                sample_response_keys: processedCount > 0 ? Object.keys(op || {}) : [],
+                sample_response_keys: (rawDebug?.opportunitiesData && rawDebug.opportunitiesData.length > 0) ? Object.keys(rawDebug.opportunitiesData[0] || {}) : [],
                 raw_response_preview: rawDebug ? (JSON.stringify(rawDebug).slice(0, 1000) + '...') : "Null",
                 range: { postedFrom, postedTo },
                 errors: globalErrors,
